@@ -1,0 +1,5 @@
+.venv
+.env
+__pycache__
+ruSpamNS_V1
+.ruff_cache
