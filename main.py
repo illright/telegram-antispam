@@ -35,11 +35,12 @@ unchecked_users = modal.Dict.from_name("unchecked_users", create_if_missing=True
 
 @dataclass
 class ChatSettings:
-    '''Preferences for how the bot should work in a particular chat.
+    """Preferences for how the bot should work in a particular chat.
 
     Attributes:
         soft_mode (bool): If True, the bot will only notify admins about spam, but won't ban users or delete messages.
-    '''
+    """
+
     soft_mode: bool = True
     # These are the users who will get tagged if spam is detected.
     # Example: ["username234"]
@@ -59,7 +60,8 @@ class ChatSettings:
 
 @dataclass
 class UncheckedUserDossier:
-    '''Before a user proves that they're not a spammer, this data is stored on them.'''
+    """Before a user proves that they're not a spammer, this data is stored on them."""
+
     join_time: datetime
     first_reaction_time: datetime | None = None
 
@@ -134,7 +136,7 @@ class Model:
         async def on_me_added_to_chat(
             event: types.chat_member_updated.ChatMemberUpdated,
         ):
-            '''Leave chats where the bot is not expected to run.'''
+            """Leave chats where the bot is not expected to run."""
             if (
                 event.chat.id not in allowed_chats
                 and event.chat.username not in allowed_chats
@@ -144,7 +146,7 @@ class Model:
 
         @self.dp.message_reaction()
         async def on_reaction(event: types.MessageReactionUpdated):
-            '''Ban users if they don't write messages and leave more than 2 reactions in 5 minutes.'''
+            """Ban users if they don't write messages and leave more than 2 reactions in 5 minutes."""
             if event.user.id not in unchecked_users:
                 return
 
@@ -171,7 +173,7 @@ class Model:
 
         @self.dp.message()
         async def on_message(message: types.Message):
-            '''Check the first message of every user and ban them if it's detected as spam.'''
+            """Check the first message of every user and ban them if it's detected as spam."""
             if message.from_user.id not in unchecked_users or message.text is None:
                 return
 
@@ -259,7 +261,7 @@ class Model:
     @staticmethod
     def contains_words(text: str, words: List[str] | None):
         lowercase_text = text.lower()
-        return words is None or any(word in lowercase_text for word in words)
+        return any(word in lowercase_text for word in (words or []))
 
 
 # uv run modal run main
@@ -268,3 +270,13 @@ def check_single_message():
     message = ""
 
     print("Spam!" if Model().is_spam.local(message) else "Not spam")
+    print(
+        "Has bad words"
+        if Model.contains_words(message, allowed_chats["feature_sliced"].bad_words)
+        else "No bad words"
+    )
+    print(
+        "Has good words"
+        if Model.contains_words(message, allowed_chats["feature_sliced"].good_words)
+        else "No good words"
+    )
