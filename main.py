@@ -1,14 +1,15 @@
-import re
 import hmac
 import logging
 import os
 from datetime import timedelta, datetime
 from typing import Annotated, List
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 import modal
 from fastapi import Header
 from aiogram import types
+
+from clean_text.v7_tiny import clean_text
 
 image = (
     modal.Image.debian_slim(python_version="3.12")
@@ -34,20 +35,36 @@ unchecked_users = modal.Dict.from_name("unchecked_users", create_if_missing=True
 
 @dataclass
 class ChatSettings:
-    soft_mode: bool
-    admin_usernames: List[str]
+    '''Preferences for how the bot should work in a particular chat.
+
+    Attributes:
+        soft_mode (bool): If True, the bot will only notify admins about spam, but won't ban users or delete messages.
+    '''
+    soft_mode: bool = True
+    # These are the users who will get tagged if spam is detected.
+    # Example: ["username234"]
+    admin_usernames: List[str] = field(default_factory=list)
+    # ID of the chat/channel where spam messages will be forwarded.
+    # May be omitted if you don't want to see which messages are considered as spam.
     spam_dump: int | None = None
+    # How long the ban should last.
+    # Recommendation: don't ban users for a long time.
+    #   Wrongful ban might happen, and most spammers don't come back anyway.
     ban_duration: timedelta = timedelta(days=7)
+    # List of lowercase words that will bypass the spam check.
     good_words: List[str] | None = None
+    # List of lowercase words that will flag the message as spam instantly.
     bad_words: List[str] | None = None
 
 
 @dataclass
 class UncheckedUserDossier:
+    '''Before a user proves that they're not a spammer, this data is stored on them.'''
     join_time: datetime
     first_reaction_time: datetime | None = None
 
 
+# Add your chat here to allow the bot to work there.
 allowed_chats = {
     "feature_sliced": ChatSettings(
         spam_dump=-1002296187217,
@@ -65,7 +82,6 @@ allowed_chats = {
             "feature",
             "фич",
         ],
-        bad_words=["заработка", "дoхoд"],
     )
 }
 
@@ -83,34 +99,25 @@ logger = logging.getLogger(__name__)
     container_idle_timeout=2,
 )
 class Model:
-    pt_save_directory = "./ruSpamNS_V1"
-    model_name = "NeuroSpaceX/ruSpamNS_v1"
+    pt_save_directory = "./ruSpamNS_v7_tiny"
+    model_name = "NeuroSpaceX/ruSpamNS_v7_tiny"
 
     @modal.build()
     def download_model_to_folder(self):
-        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         hf_token = os.environ["HF_TOKEN"]
 
-        model = (
-            AutoModelForSequenceClassification.from_pretrained(
-                self.model_name, num_labels=1, token=hf_token
-            )
-            .to(device)
-            .eval()
-        )
+        model = AutoModelForSequenceClassification.from_pretrained(
+            self.model_name, num_labels=1, token=hf_token
+        ).eval()
         tokenizer = AutoTokenizer.from_pretrained(self.model_name, token=hf_token)
         model.save_pretrained(self.pt_save_directory)
         tokenizer.save_pretrained(self.pt_save_directory)
 
     @modal.enter(snap=True)
     def load_model_weights(self):
-        self.model = (
-            AutoModelForSequenceClassification.from_pretrained(
-                self.pt_save_directory, num_labels=1
-            )
-            .to("cpu")
-            .eval()
-        )
+        self.model = AutoModelForSequenceClassification.from_pretrained(
+            self.pt_save_directory, num_labels=1
+        ).eval()
         self.tokenizer = AutoTokenizer.from_pretrained(self.pt_save_directory)
 
     @modal.enter(snap=False)
@@ -127,6 +134,7 @@ class Model:
         async def on_me_added_to_chat(
             event: types.chat_member_updated.ChatMemberUpdated,
         ):
+            '''Leave chats where the bot is not expected to run.'''
             if (
                 event.chat.id not in allowed_chats
                 and event.chat.username not in allowed_chats
@@ -136,6 +144,7 @@ class Model:
 
         @self.dp.message_reaction()
         async def on_reaction(event: types.MessageReactionUpdated):
+            '''Ban users if they don't write messages and leave more than 2 reactions in 5 minutes.'''
             if event.user.id not in unchecked_users:
                 return
 
@@ -162,6 +171,7 @@ class Model:
 
         @self.dp.message()
         async def on_message(message: types.Message):
+            '''Check the first message of every user and ban them if it's detected as spam.'''
             if message.from_user.id not in unchecked_users or message.text is None:
                 return
 
@@ -228,7 +238,7 @@ class Model:
 
     @modal.method()
     def is_spam(self, message: str):
-        message = self.clean_text(message)
+        message = clean_text(message)
         encoding = self.tokenizer(
             message,
             padding="max_length",
@@ -236,8 +246,8 @@ class Model:
             max_length=128,
             return_tensors="pt",
         )
-        input_ids = encoding["input_ids"].to("cpu")
-        attention_mask = encoding["attention_mask"].to("cpu")
+        input_ids = encoding["input_ids"]
+        attention_mask = encoding["attention_mask"]
 
         with torch.no_grad():
             outputs = self.model(input_ids, attention_mask=attention_mask).logits
@@ -245,27 +255,6 @@ class Model:
 
         logger.debug(f"Predicted spam score: {pred}")
         return int(pred >= 0.5)
-
-    @staticmethod
-    def clean_text(text: str):
-        text = re.sub(r"\w+", lambda m: Model.recover_cyrillic_in_word(m.group()), text)
-        text = re.sub(r"http\S+", "", text)
-        text = re.sub(r"[^А-Яа-я0-9 ]+", " ", text)
-        text = text.lower().strip()
-        return text
-
-    @staticmethod
-    def recover_cyrillic_in_word(word: str):
-        """Convert common Latin substitutions of Cyrillic letters back to the original ones, for example, "с" -> "c"."""
-        translation_table = str.maketrans(
-            "cyeaopxurkbnmETYOPAHKXCBM",
-            "суеаорхигкьпмЕТУОРАНКХСВМ",
-        )
-        cyrillic_letter_pattern = re.compile(r"[а-яё]", re.IGNORECASE)
-        if cyrillic_letter_pattern.search(word):
-            return word.translate(translation_table)
-        else:
-            return word
 
     @staticmethod
     def contains_words(text: str, words: List[str] | None):

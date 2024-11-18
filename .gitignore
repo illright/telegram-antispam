@@ -2,4 +2,5 @@
 .env
 __pycache__
 ruSpamNS_V1
+ruSpamNS_v7_tiny
 .ruff_cache
