@@ -148,6 +148,7 @@ class Model:
         async def on_reaction(event: types.MessageReactionUpdated):
             """Ban users if they don't write messages and leave more than 2 reactions in 5 minutes."""
             if event.user.id not in unchecked_users:
+                logger.info("User is checked, skipping")
                 return
 
             chat_settings = allowed_chats.get(event.chat.id) or allowed_chats.get(
@@ -174,7 +175,11 @@ class Model:
         @self.dp.message()
         async def on_message(message: types.Message):
             """Check the first message of every user and ban them if it's detected as spam."""
-            if message.from_user.id not in unchecked_users or message.text is None:
+            if message.from_user.id not in unchecked_users:
+                logger.info("User is checked, skipping")
+                return
+
+            if message.text is None:
                 return
 
             chat_settings = allowed_chats.get(message.chat.id) or allowed_chats.get(
@@ -189,6 +194,10 @@ class Model:
             if not has_bad_words and (
                 has_good_words or not self.is_spam.local(message.text)
             ):
+                if has_good_words:
+                    logger.info(f"Good words found in message from {message.from_user.id}")
+                else:
+                    logger.info(f"Message from {message.from_user.id} is not spam")
                 unchecked_users.pop(message.from_user.id)
             else:
                 logger.info(f"Spam detected from user {message.from_user.id}")
