@@ -193,19 +193,39 @@ class Model:
                 logger.error(f"Message in unknown chat, ID: {message.chat.id}")
                 return
 
-            has_bad_words = self.contains_words(message.text, chat_settings.bad_words)
-            has_good_words = self.contains_words(message.text, chat_settings.good_words)
-            if not has_bad_words and (
-                has_good_words or not self.is_spam.local(message.text)
-            ):
+            try:
+                check_passed = False
+
+                message_text = message.caption or message.text
+                has_bad_words = self.contains_words(
+                    message_text, chat_settings.bad_words
+                )
+                has_good_words = self.contains_words(
+                    message_text, chat_settings.good_words
+                )
+                has_telegram_links = "t.me/" in message_text or any(
+                    message.entities or [], lambda x: x.type == "text_link" and "t.me/" in x.url
+                )
+
                 if has_good_words:
+                    check_passed = True
                     logger.info(f"Good words found in message from {message.from_user.id}")
+                elif has_bad_words:
+                    check_passed = False
+                    logger.info(f"Bad words found in message from {message.from_user.id}")
+                elif has_telegram_links:
+                    check_passed = False
+                    logger.info(f"Telegram links found in message from {message.from_user.id}")
+                elif self.is_spam.local(message_text):
+                    check_passed = False
+                    logger.info(f"Spam detected from user {message.from_user.id}")
                 else:
+                    check_passed = True
                     logger.info(f"Message from {message.from_user.id} is not spam")
-                unchecked_users.pop(message.from_user.id)
-            else:
-                logger.info(f"Spam detected from user {message.from_user.id}")
-                try:
+
+                if check_passed:
+                    unchecked_users.pop(message.from_user.id)
+                else:
                     if chat_settings.spam_dump is not None:
                         await message.forward(
                             chat_id=chat_settings.spam_dump, disable_notification=True
@@ -222,9 +242,8 @@ class Model:
                             until_date=chat_settings.ban_duration,
                         )
                         await message.delete()
-
-                except Exception as e:
-                    logger.error(f"Error while processing message: {e}")
+            except Exception as e:
+                logger.error(f"Error while processing message: {e}")
 
         if "TELEGRAM_BOT_TOKEN" in os.environ:
             self.bot = Bot(
