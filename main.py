@@ -183,9 +183,6 @@ class Model:
                 logger.info("User is checked, skipping")
                 return
 
-            if message.text is None:
-                return
-
             chat_settings = allowed_chats.get(message.chat.id) or allowed_chats.get(
                 message.chat.username
             )
@@ -197,6 +194,10 @@ class Model:
                 check_passed = False
 
                 message_text = message.caption or message.text
+                if message_text is None:
+                    logger.info("Message has no text, skipping")
+                    return
+
                 has_bad_words = self.contains_words(
                     message_text, chat_settings.bad_words
                 )
@@ -206,6 +207,7 @@ class Model:
                 has_telegram_links = "t.me/" in message_text or any(
                     message.entities or [], lambda x: x.type == "text_link" and "t.me/" in x.url
                 )
+                has_buttons = message.reply_markup is not None
 
                 if has_good_words:
                     check_passed = True
@@ -216,6 +218,9 @@ class Model:
                 elif has_telegram_links:
                     check_passed = False
                     logger.info(f"Telegram links found in message from {message.from_user.id}")
+                elif has_buttons:
+                    check_passed = False
+                    logger.info(f"Buttons found in message from {message.from_user.id}")
                 elif self.is_spam.local(message_text):
                     check_passed = False
                     logger.info(f"Spam detected from user {message.from_user.id}")
