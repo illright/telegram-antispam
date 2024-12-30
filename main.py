@@ -205,7 +205,8 @@ class Model:
                     message_text, chat_settings.good_words
                 )
                 has_telegram_links = "t.me/" in message_text or any(
-                    message.entities or [], lambda x: x.type == "text_link" and "t.me/" in x.url
+                    entity.type == "text_link" and "t.me/" in entity.url
+                    for entity in (message.entities or [])
                 )
                 has_buttons = message.reply_markup is not None
 
