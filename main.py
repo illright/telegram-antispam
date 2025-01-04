@@ -151,6 +151,10 @@ class Model:
         @self.dp.message_reaction()
         async def on_reaction(event: types.MessageReactionUpdated):
             """Ban users if they don't write messages and leave more than 2 reactions in 5 minutes."""
+            if len(event.old_reaction) > len(event.new_reaction):
+                logger.info("Reaction removed, skipping")
+                return
+
             if event.user.id not in unchecked_users:
                 logger.info("User is checked, skipping")
                 return
