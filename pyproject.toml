@@ -10,6 +10,7 @@ dependencies = [
     "modal>=0.70.1",
     "python-dotenv>=1.0.1",
     "ruff>=0.8.4",
+    "telethon>=1.38.1",
     "torch>=2.5.1",
     "transformers>=4.47.1",
 ]
