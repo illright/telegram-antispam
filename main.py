@@ -34,31 +34,6 @@ unchecked_users = modal.Dict.from_name("unchecked_users", create_if_missing=True
 
 
 @dataclass
-class ChatSettings:
-    """Preferences for how the bot should work in a particular chat.
-
-    Attributes:
-        soft_mode (bool): If True, the bot will only notify admins about spam, but won't ban users or delete messages.
-    """
-
-    soft_mode: bool = True
-    # These are the users who will get tagged if spam is detected.
-    # Example: ["username234"]
-    admin_usernames: List[str] = field(default_factory=list)
-    # ID of the chat/channel where spam messages will be forwarded.
-    # May be omitted if you don't want to see which messages are considered as spam.
-    spam_dump: int | None = None
-    # How long the ban should last.
-    # Recommendation: don't ban users for a long time.
-    #   Wrongful ban might happen, and most spammers don't come back anyway.
-    ban_duration: timedelta = timedelta(days=7)
-    # List of lowercase words that will bypass the spam check.
-    good_words: List[str] | None = None
-    # List of lowercase words that will flag the message as spam instantly.
-    bad_words: List[str] | None = None
-
-
-@dataclass
 class UncheckedUserDossier:
     """Before a user proves that they're not a spammer, this data is stored on them."""
 
@@ -66,11 +41,40 @@ class UncheckedUserDossier:
     first_reaction_time: datetime | None = None
 
 
+@dataclass
+class ChatSettings:
+    """Preferences for how the bot should work in a particular chat."""
+
+    # If True, the bot will only notify admins about spam, but won't ban users or delete messages.
+    soft_mode: bool = True
+
+    # These are the users who will get tagged if spam is detected.
+    # Example: ["username234"]
+    admin_usernames: List[str] = field(default_factory=list)
+
+    # ID of the chat/channel where spam messages will be forwarded.
+    # Easiest way to get this ID: https://gist.github.com/mraaroncruz/e76d19f7d61d59419002db54030ebe35
+    # May be omitted if you don't want to see which messages are considered as spam.
+    # You can still see them in "Recent actions" of the chat if you're an admin.
+    spam_dump: int | None = None
+
+    # How long the ban should last.
+    # Recommendation: don't ban users for a long time.
+    #   Wrongful bans might happen, and most spammers don't come back anyway.
+    ban_duration: timedelta = timedelta(seconds=30)
+
+    # List of lowercase words/phrases that will make the bot skip the spam check.
+    good_words: List[str] | None = None
+
+    # List of lowercase words/phrases that will flag the message as spam instantly.
+    bad_words: List[str] | None = None
+
+
 # Add your chat here to allow the bot to work there.
 allowed_chats = {
     "feature_sliced": ChatSettings(
         spam_dump=-1002296187217,
-        ban_duration=timedelta(hours=2),
+        ban_duration=timedelta(seconds=30),
         soft_mode=False,
         admin_usernames=["illright"],
         good_words=[
@@ -84,10 +88,7 @@ allowed_chats = {
             "feature",
             "фич",
         ],
-        bad_words=[
-            "сидеть без денег",
-            "легких денег"
-        ]
+        bad_words=["сидеть без денег", "легких денег"],
     )
 }
 
@@ -110,6 +111,7 @@ class Model:
 
     @modal.build()
     def download_model_to_folder(self):
+        """Download the model to the container. Runs once when the app is deployed."""
         hf_token = os.environ["HF_TOKEN"]
 
         model = AutoModelForSequenceClassification.from_pretrained(
@@ -121,6 +123,7 @@ class Model:
 
     @modal.enter(snap=True)
     def load_model_weights(self):
+        """Load the model into memory. `snap=True` creates a memory snapshot to speed up further runs."""
         self.model = AutoModelForSequenceClassification.from_pretrained(
             self.pt_save_directory, num_labels=1
         ).eval()
@@ -128,10 +131,12 @@ class Model:
 
     @modal.enter(snap=False)
     def setup_bot(self):
+        """Register event handlers for the bot."""
         self.dp = Dispatcher()
 
         @self.dp.chat_member(ChatMemberUpdatedFilter(IS_NOT_MEMBER >> IS_MEMBER))
         def on_new_user(event: types.chat_member_updated.ChatMemberUpdated):
+            """When someone joins, they are considered unchecked until they write a message."""
             unchecked_users[event.new_chat_member.user.id] = UncheckedUserDossier(
                 join_time=event.date
             )
@@ -216,13 +221,19 @@ class Model:
 
                 if has_good_words:
                     check_passed = True
-                    logger.info(f"Good words found in message from {message.from_user.id}")
+                    logger.info(
+                        f"Good words found in message from {message.from_user.id}"
+                    )
                 elif has_bad_words:
                     check_passed = False
-                    logger.info(f"Bad words found in message from {message.from_user.id}")
+                    logger.info(
+                        f"Bad words found in message from {message.from_user.id}"
+                    )
                 elif has_telegram_links:
                     check_passed = False
-                    logger.info(f"Telegram links found in message from {message.from_user.id}")
+                    logger.info(
+                        f"Telegram links found in message from {message.from_user.id}"
+                    )
                 elif has_buttons:
                     check_passed = False
                     logger.info(f"Buttons found in message from {message.from_user.id}")
@@ -267,6 +278,8 @@ class Model:
         update: dict,
         x_telegram_bot_api_secret_token: Annotated[str | None, Header()] = None,
     ) -> None | dict:
+        """Accept an update from Telegram's API and verify that it's legit."""
+
         if not hmac.compare_digest(
             x_telegram_bot_api_secret_token, os.environ["EXTRA_SECURITY_TOKEN"]
         ):
@@ -306,7 +319,7 @@ class Model:
         return any(word in lowercase_text for word in (words or []))
 
 
-# uv run modal run main
+# Run with `uv run modal run main` to check a single message.
 @app.local_entrypoint()
 def check_single_message():
     message = ""

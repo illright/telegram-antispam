@@ -23,6 +23,7 @@ async def set_webhook():
         )
 
 
+# Run with `uv run setup_bot.py`
 if __name__ == "__main__":
     import asyncio
 
