@@ -68,8 +68,8 @@ The `setup_bot.py` is a script that is used to connect the bot to the Modal app 
 
 ## License
 
-- The source code of the bot is licensed under GNU GPL v3.0.  
-  Explained: https://choosealicense.com/licenses/gpl-3.0
+- The source code of the bot is licensed under GNU AGPL-3.0.  
+  Explained: https://choosealicense.com/licenses/agpl-3.0
 
 - The spam classifier that is used by the bot, is licensed by [NeuroSpaceX](https://huggingface.co/NeuroSpaceX) under CC-BY-NC-4.0.  
   Explained: https://creativecommons.org/licenses/by-nc/4.0/
