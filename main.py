@@ -218,6 +218,10 @@ class Model:
                     for entity in (message.entities or [])
                 )
                 has_buttons = message.reply_markup is not None
+                is_forwarded_from_channel = (
+                    message.forward_from_chat is not None
+                    and message.forward_from_chat.type == "channel"
+                )
 
                 if has_good_words:
                     check_passed = True
@@ -237,6 +241,11 @@ class Model:
                 elif has_buttons:
                     check_passed = False
                     logger.info(f"Buttons found in message from {message.from_user.id}")
+                elif is_forwarded_from_channel:
+                    check_passed = False
+                    logger.info(
+                        f"Message forwarded from a channel by {message.from_user.id}"
+                    )
                 elif self.is_spam.local(message_text):
                     check_passed = False
                     logger.info(f"Spam detected from user {message.from_user.id}")
