@@ -13,11 +13,11 @@ from clean_text.v7_tiny import clean_text
 
 image = (
     modal.Image.debian_slim(python_version="3.12")
-    .pip_install("torch==2.4.1")
-    .pip_install("transformers==4.44.2")
-    .pip_install("fastapi==0.114.2")
+    .pip_install("torch==2.5.1")
+    .pip_install("transformers==4.47.1")
+    .pip_install("fastapi==0.115.6")
     .pip_install("pydantic==2.8.2")
-    .pip_install("aiogram==3.13.0")
+    .pip_install("aiogram==3.16.0")
 )
 
 with image.imports():
