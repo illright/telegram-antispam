@@ -11,6 +11,12 @@ from aiogram import types
 
 from clean_text.v7_tiny import clean_text
 
+classifier_path = "./ruSpamNS_v7_tiny"
+if os.path.exists(os.path.join('classifier', classifier_path)):
+    # If the archive extractor created an extra folder "classifier", go along with it
+    classifier_path = os.path.normpath(os.path.join('classifier', classifier_path))
+
+remote_project_path = "/app"
 image = (
     modal.Image.debian_slim(python_version="3.12")
     .pip_install("torch==2.5.1")
@@ -18,6 +24,11 @@ image = (
     .pip_install("fastapi==0.115.6")
     .pip_install("pydantic==2.8.2")
     .pip_install("aiogram==3.16.0")
+    .add_local_dir(
+        classifier_path,
+        remote_path=os.path.join(remote_project_path, classifier_path),
+        copy=True,
+    )
 )
 
 with image.imports():
@@ -90,6 +101,7 @@ allowed_chats = {
         ],
         bad_words=["сидеть без денег", "легких денег"],
     )
+    # "your_chat_link_without_@": ChatSettings(),
 }
 
 logging.basicConfig(level=logging.INFO)
@@ -98,36 +110,20 @@ logger = logging.getLogger(__name__)
 
 @app.cls(
     image=image,
-    secrets=[
-        modal.Secret.from_name("antispam-hf-token"),
-        modal.Secret.from_name("antispam-telegram-bot-token"),
-    ],
+    secrets=[modal.Secret.from_name("antispam-telegram-bot-token")],
     enable_memory_snapshot=True,
     container_idle_timeout=2,
 )
 class Model:
-    pt_save_directory = "./ruSpamNS_v7_tiny"
-    model_name = "NeuroSpaceX/ruSpamNS_v7_tiny"
-
-    @modal.build()
-    def download_model_to_folder(self):
-        """Download the model to the container. Runs once when the app is deployed."""
-        hf_token = os.environ["HF_TOKEN"]
-
-        model = AutoModelForSequenceClassification.from_pretrained(
-            self.model_name, num_labels=1, token=hf_token
-        ).eval()
-        tokenizer = AutoTokenizer.from_pretrained(self.model_name, token=hf_token)
-        model.save_pretrained(self.pt_save_directory)
-        tokenizer.save_pretrained(self.pt_save_directory)
+    model_path = os.path.join(remote_project_path, classifier_path)
 
     @modal.enter(snap=True)
     def load_model_weights(self):
         """Load the model into memory. `snap=True` creates a memory snapshot to speed up further runs."""
         self.model = AutoModelForSequenceClassification.from_pretrained(
-            self.pt_save_directory, num_labels=1
+            self.model_path, num_labels=1
         ).eval()
-        self.tokenizer = AutoTokenizer.from_pretrained(self.pt_save_directory)
+        self.tokenizer = AutoTokenizer.from_pretrained(self.model_path)
 
     @modal.enter(snap=False)
     def setup_bot(self):

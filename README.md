@@ -33,17 +33,14 @@ You will need [uv](https://github.com/astral-sh/uv) installed.
 3. Rename the `.env.sample` file to `.env`
 4. Create an account on [modal.com](https://modal.com); that's where the bot will be hosted
    1. Run `uv run modal setup` to log in from the terminal
-5. Create an account on [Hugging Face](https://huggingface.co/); that's where the bot will download the spam classifier
-   1. Request access to the [`NeuroSpaceX/ruSpam_v7_tiny` model](https://huggingface.co/NeuroSpaceX/ruSpamNS_v7_tiny), you might have to wait about a day
-   2. [Create a fine-grained access token](https://huggingface.co/settings/tokens). In "Repositories permissions", select `NeuroSpaceX/ruSpamNS_v7_tiny` and enable "Read access". Copy the token into `HF_TOKEN` in the `.env` file, removing the sample value
+5. Download the `classifier.zip` archive from [the latest release on GitHub](https://github.com/illright/telegram-antispam/releases/latest) (look for the section "Assets") and unpack it here in this folder
 6. Create a Telegram bot using [@BotFather](https://t.me/BotFather)
    1. Copy the bot token into `TELEGRAM_BOT_TOKEN` in the `.env` file, removing the sample value
 7. [Create a long password](https://bitwarden.com/password-generator/#password-generator) (50 characters) and copy it into `EXTRA_SECURITY_TOKEN` in the `.env` file, removing the sample value
-8. Create two secrets on Modal with these commands:
+8. Create a secret on Modal with these commands:
    1. `source .env` to load the environment variables into your shell
-   2. `uv run modal secret create antispam-hf-token HF_TOKEN=$HF_TOKEN`
-   3. `uv run modal secret create antispam-telegram-bot-token EXTRA_SECURITY_TOKEN=$EXTRA_SECURITY_TOKEN TELEGRAM_BOT_TOKEN=$TELEGRAM_BOT_TOKEN`
-9. Create a channel where the bot can forward spam for manual review. Invite your Telegram bot as a member (Optional).
+   2. `uv run modal secret create antispam-telegram-bot-token EXTRA_SECURITY_TOKEN=$EXTRA_SECURITY_TOKEN TELEGRAM_BOT_TOKEN=$TELEGRAM_BOT_TOKEN`
+9. Create a channel where the bot can forward spam for manual review. Invite your Telegram bot as a member (Optional, but recommended).
 10. Go to `main.py` and find `allowed_chats`. Replace the sample chat with your own. See the descriptions of parameters in the `ChatSettings` class. All parameters can be omitted.
 11. Run `uv run modal deploy main` to deploy the bot to Modal
     1. It will print the web endpoint:
