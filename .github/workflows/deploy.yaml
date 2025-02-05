@@ -1,0 +1,52 @@
+name: Deploy to Modal
+on:
+  push:
+    branches: [main]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: Set up Python
+        run: uv python install
+
+      - name: Install dependencies
+        run: uv sync
+
+      - name: Sign in to Modal
+        run: uv run modal token set --token-id ${{ vars.MODAL_API_TOKEN_ID }} --token-secret $MODAL_API_TOKEN_SECRET
+        env:
+          MODAL_API_TOKEN_SECRET: ${{ secrets.MODAL_API_TOKEN_SECRET }}
+
+      - name: Get the URL of the classifier from the latest release
+        uses: actions/github-script@v7
+        id: get-classifier-url
+        with:
+          result-encoding: string
+          script: |
+            const { data: latestRelease } = await github.rest.repos.getLatestRelease(
+              context.repo
+            );
+            const classifierAsset = latestRelease.assets.find(
+              (asset) => asset.name === 'classifier.zip'
+            );
+            if (classifierAsset === undefined) {
+              throw new Error('No asset named classifier.zip in the latest release!');
+            }
+            return classifierAsset.browser_download_url;
+
+      - name: Download and unpack the classifier
+        run: |
+          curl -L ${{ steps.get-classifier-url.outputs.result }} -o classifier.zip
+          unzip classifier.zip
+          rm classifier.zip
+
+      - name: Deploy to Modal
+        run: uv run modal deploy main > /dev/null
