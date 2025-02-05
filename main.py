@@ -137,6 +137,7 @@ class Model:
         @self.dp.chat_member(ChatMemberUpdatedFilter(IS_NOT_MEMBER >> IS_MEMBER))
         def on_new_user(event: types.chat_member_updated.ChatMemberUpdated):
             """When someone joins, they are considered unchecked until they write a message."""
+            logger.info(f"New unchecked user: {event.new_chat_member.user.id}")
             unchecked_users[event.new_chat_member.user.id] = UncheckedUserDossier(
                 join_time=event.date
             )
@@ -161,7 +162,7 @@ class Model:
                 return
 
             if event.user.id not in unchecked_users:
-                logger.info("User is checked, skipping")
+                logger.info(f"User {event.user.id} is checked, skipping")
                 return
 
             chat_settings = allowed_chats.get(event.chat.id) or allowed_chats.get(
@@ -173,6 +174,7 @@ class Model:
 
             user_dossier = unchecked_users[event.user.id]
             if user_dossier.first_reaction_time is None:
+                logger.info(f"First reaction from {event.user.id}")
                 user_dossier.first_reaction_time = event.date
                 unchecked_users[event.user.id] = user_dossier
             else:
@@ -189,7 +191,7 @@ class Model:
         async def on_message(message: types.Message):
             """Check the first message of every user and ban them if it's detected as spam."""
             if message.from_user.id not in unchecked_users:
-                logger.info("User is checked, skipping")
+                logger.info(f"User {message.from_user.id} is checked, skipping")
                 return
 
             chat_settings = allowed_chats.get(message.chat.id) or allowed_chats.get(
@@ -254,6 +256,7 @@ class Model:
                     logger.info(f"Message from {message.from_user.id} is not spam")
 
                 if check_passed:
+                    logger.info(f"User {message.from_user.id} is now checked")
                     unchecked_users.pop(message.from_user.id)
                 else:
                     if chat_settings.spam_dump is not None:
