@@ -1,3 +1,6 @@
+<a href="./README.ru.md">
+   <img align="right" alt="README на русском" src="./.github/readme-assets/readme-in-russian.svg" height="36" /></a>
+
 # Antispam Telegram bot
 
 This bot fights Russian spam in Telegram chats.
