@@ -1,7 +1,7 @@
 import hmac
 import logging
 import os
-from datetime import timedelta, datetime
+from datetime import timedelta
 from typing import Annotated, List
 from dataclasses import dataclass, field
 
@@ -42,14 +42,6 @@ with image.imports():
 
 app = modal.App(name="antispam", image=image)
 unchecked_users = modal.Dict.from_name("unchecked_users", create_if_missing=True)
-
-
-@dataclass
-class UncheckedUserDossier:
-    """Before a user proves that they're not a spammer, this data is stored on them."""
-
-    join_time: datetime
-    first_reaction_time: datetime | None = None
 
 
 @dataclass
@@ -134,9 +126,7 @@ class Model:
         def on_new_user(event: types.chat_member_updated.ChatMemberUpdated):
             """When someone joins, they are considered unchecked until they write a message."""
             logger.info(f"New unchecked user: {event.new_chat_member.user.id}")
-            unchecked_users[event.new_chat_member.user.id] = UncheckedUserDossier(
-                join_time=event.date
-            )
+            unchecked_users[event.new_chat_member.user.id] = event.date
 
         @self.dp.my_chat_member(ChatMemberUpdatedFilter(IS_NOT_MEMBER >> IS_MEMBER))
         async def on_me_added_to_chat(
@@ -149,39 +139,6 @@ class Model:
             ):
                 logger.info(f"Added to unknown chat {event.chat.id}, leaving")
                 await self.bot.leave_chat(event.chat.id)
-
-        @self.dp.message_reaction()
-        async def on_reaction(event: types.MessageReactionUpdated):
-            """Ban users if they don't write messages and leave more than 2 reactions in 5 minutes."""
-            if len(event.old_reaction) > len(event.new_reaction):
-                logger.info("Reaction removed, skipping")
-                return
-
-            if event.user.id not in unchecked_users:
-                logger.info(f"User {event.user.id} is checked, skipping")
-                return
-
-            chat_settings = allowed_chats.get(event.chat.id) or allowed_chats.get(
-                event.chat.username
-            )
-            if chat_settings is None:
-                logger.error(f"Reaction in unknown chat, ID: {event.chat.id}")
-                return
-
-            user_dossier = unchecked_users[event.user.id]
-            if user_dossier.first_reaction_time is None:
-                logger.info(f"First reaction from {event.user.id}")
-                user_dossier.first_reaction_time = event.date
-                unchecked_users[event.user.id] = user_dossier
-            else:
-                time_between_reactions = event.date - user_dossier.first_reaction_time
-                if time_between_reactions < timedelta(minutes=5):
-                    logger.info(f"Spam reactions from {event.user.username}")
-                    await self.bot.ban_chat_member(
-                        chat_id=event.chat.id,
-                        user_id=event.user.id,
-                        until_date=chat_settings.ban_duration,
-                    )
 
         @self.dp.message()
         async def on_message(message: types.Message):
