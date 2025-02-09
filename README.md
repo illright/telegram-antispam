@@ -23,7 +23,7 @@ This is an AI-powered bot, so ethics are crucial:
 3. It's powered by a small classifier to be **resource-efficient**, not 100% accurate.  
    The added benefit is that you can host it on Modal and barely use any monthly credits.
 4. The classifier is **strictly for non-commercial purposes**.  
-   The author of the classifier, [NeuroSpaceX](https://huggingface.co/NeuroSpaceX), chose the CC-BY-NC-4.0 license. Respect that.
+   The author of the classifier, [NeuroSpaceX](https://huggingface.co/NeuroSpaceX), chose the CC-BY-NC-ND-3.0 license. Respect that.
 
 <details><summary>I understand, give me the instructions</summary>
 
@@ -70,5 +70,5 @@ The `setup_bot.py` is a script that is used to connect the bot to the Modal app 
 - The source code of the bot is licensed under GNU AGPL-3.0.  
   Explained: https://choosealicense.com/licenses/agpl-3.0
 
-- The spam classifier that is used by the bot, is licensed by [NeuroSpaceX](https://huggingface.co/NeuroSpaceX) under CC-BY-NC-4.0.  
-  Explained: https://creativecommons.org/licenses/by-nc/4.0/
+- The spam classifier that is used by the bot, is licensed by [NeuroSpaceX](https://huggingface.co/NeuroSpaceX) under CC-BY-NC-ND-3.0.  
+  Explained: https://creativecommons.org/licenses/by-nc-nd/3.0/

@@ -23,7 +23,7 @@
 3. Он работает на небольшом классификаторе, чтобы быть **ресурсоэффективным**, а не 100% точным.  
    Дополнительное преимущество в том, что вы можете хостить его на Modal и почти не будете расходовать ежемесячные кредиты.
 4. Классификатор **строго для некоммерческого использования**.  
-   Автор классификатора, [NeuroSpaceX](https://huggingface.co/NeuroSpaceX), выбрал лицензию CC-BY-NC-4.0. Уважайте это.
+   Автор классификатора, [NeuroSpaceX](https://huggingface.co/NeuroSpaceX), выбрал лицензию CC-BY-NC-ND-3.0. Уважайте это.
 
 <details><summary>Я понял, дайте инструкции</summary>
 
@@ -70,5 +70,5 @@
 - Исходный код бота лицензирован под GNU AGPL-3.0.  
   Объяснение: https://choosealicense.com/licenses/agpl-3.0
 
-- Классификатор спама, используемый ботом, лицензирован [NeuroSpaceX](https://huggingface.co/NeuroSpaceX) под CC-BY-NC-4.0.  
-  Объяснение: https://creativecommons.org/licenses/by-nc/4.0/
+- Классификатор спама, используемый ботом, лицензирован [NeuroSpaceX](https://huggingface.co/NeuroSpaceX) под CC-BY-NC-ND-3.0.  
+  Объяснение: https://creativecommons.org/licenses/by-nc-nd/3.0/
