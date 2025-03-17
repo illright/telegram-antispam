@@ -92,7 +92,8 @@ allowed_chats = {
             "фич",
         ],
         bad_words=["сидеть без денег", "легких денег"],
-    )
+    ),
+    "goedemorgen_walks": ChatSettings()
     # "your_chat_link_without_@": ChatSettings(),
 }
 
