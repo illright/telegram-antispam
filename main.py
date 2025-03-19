@@ -93,7 +93,9 @@ allowed_chats = {
         ],
         bad_words=["сидеть без денег", "легких денег"],
     ),
-    "goedemorgen_walks": ChatSettings()
+    "goedemorgen_walks": ChatSettings(
+        soft_mode=False,
+    ),
     # "your_chat_link_without_@": ChatSettings(),
 }
 
