@@ -17,7 +17,7 @@ async def set_webhook():
     ) as bot:
         await bot.set_webhook(
             url=os.environ["WEBHOOK_URL"],
-            allowed_updates=["message", "chat_member", "message_reaction"],
+            allowed_updates=["message", "chat_member"],
             secret_token=os.environ["EXTRA_SECURITY_TOKEN"],
             max_connections=1,
         )
