@@ -165,6 +165,10 @@ class Model:
                     logger.info("Message has no text, skipping")
                     return
 
+                if len(message_text) <= 1:
+                    logger.info("Message is too short to check, skipping")
+                    return
+
                 has_bad_words = self.contains_words(
                     message_text, chat_settings.bad_words
                 )
