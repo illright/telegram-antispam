@@ -19,11 +19,11 @@ if os.path.exists(os.path.join('classifier', classifier_path)):
 remote_project_path = "/app"
 image = (
     modal.Image.debian_slim(python_version="3.12")
-    .pip_install("torch==2.5.1")
-    .pip_install("transformers==4.47.1")
-    .pip_install("fastapi==0.115.6")
-    .pip_install("pydantic==2.8.2")
-    .pip_install("aiogram==3.16.0")
+    .pip_install("torch==2.7.0")
+    .pip_install("transformers==4.51.3")
+    .pip_install("fastapi==0.115.12")
+    .pip_install("pydantic==2.11.4")
+    .pip_install("aiogram==3.20.0.post0")
     .add_local_dir(
         classifier_path,
         remote_path=os.path.join(remote_project_path, classifier_path),
@@ -107,7 +107,7 @@ logger = logging.getLogger(__name__)
     image=image,
     secrets=[modal.Secret.from_name("antispam-telegram-bot-token")],
     enable_memory_snapshot=True,
-    container_idle_timeout=2,
+    scaledown_window=2,
 )
 class Model:
     model_path = os.path.join(remote_project_path, classifier_path)
@@ -244,7 +244,7 @@ class Model:
                 default=DefaultBotProperties(parse_mode=ParseMode.HTML),
             )
 
-    @modal.web_endpoint(method="POST")
+    @modal.fastapi_endpoint(method="POST")
     async def process_update(
         self,
         update: dict,

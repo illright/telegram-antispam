@@ -1,16 +1,16 @@
 [project]
-name = "antispam-tlg-ru"
+name = "telegram-antispam"
 version = "0.1.0"
 description = "A Telegram bot that can automatically delete Russian spam messages"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
-    "aiogram>=3.16.0",
-    "fastapi>=0.115.6",
-    "modal>=0.70.1",
-    "python-dotenv>=1.0.1",
-    "ruff>=0.8.4",
-    "telethon>=1.38.1",
-    "torch>=2.5.1",
-    "transformers>=4.47.1",
+    "aiogram>=3.20.0",
+    "fastapi>=0.115.12",
+    "modal>=1.0.1",
+    "python-dotenv>=1.1.0",
+    "ruff>=0.11.10",
+    "telethon>=1.40.0",
+    "torch>=2.7.0",
+    "transformers>=4.51.3",
 ]

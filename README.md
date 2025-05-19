@@ -44,7 +44,7 @@ You will need [uv](https://github.com/astral-sh/uv) installed.
    2. `uv run modal secret create antispam-telegram-bot-token EXTRA_SECURITY_TOKEN=$EXTRA_SECURITY_TOKEN TELEGRAM_BOT_TOKEN=$TELEGRAM_BOT_TOKEN`
 9. Create a channel where the bot can forward spam for manual review. Invite your Telegram bot as a member (Optional, but recommended).
 10. Go to `main.py` and find `allowed_chats`. Replace the sample chat with your own. See the descriptions of parameters in the `ChatSettings` class. All parameters can be omitted.
-11. Run `uv run modal deploy main` to deploy the bot to Modal
+11. Run `uv run modal deploy -m main` to deploy the bot to Modal
     1. It will print the web endpoint:
        ```
        ├── 🔨 Created web endpoint for Model.process_update => https://something-something.modal.run
