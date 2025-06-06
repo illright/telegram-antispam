@@ -1,6 +1,7 @@
 import hmac
 import logging
 import os
+import re
 from datetime import timedelta
 from typing import Annotated, List
 from dataclasses import dataclass, field
@@ -29,6 +30,7 @@ image = (
         remote_path=os.path.join(remote_project_path, classifier_path),
         copy=True,
     )
+    .add_local_python_source("clean_text")
 )
 
 with image.imports():
@@ -165,7 +167,7 @@ class Model:
                     logger.info("Message has no text, skipping")
                     return
 
-                if len(message_text) <= 1:
+                if len(message_text) <= 2 or re.match(r'[^\w]+$', message_text):
                     logger.info("Message is too short to check, skipping")
                     return
 
@@ -184,6 +186,7 @@ class Model:
                     message.forward_from_chat is not None
                     and message.forward_from_chat.type == "channel"
                 )
+                is_story = message.story is not None
 
                 if has_good_words:
                     check_passed = True
@@ -208,6 +211,9 @@ class Model:
                     logger.info(
                         f"Message forwarded from a channel by {message.from_user.id}"
                     )
+                elif is_story:
+                    check_passed = False
+                    logger.info(f"Story sent by user {message.from_user.id}")
                 elif self.is_spam.local(message_text):
                     check_passed = False
                     logger.info(f"Spam detected from user {message.from_user.id}")
