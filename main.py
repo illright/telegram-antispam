@@ -13,9 +13,9 @@ from aiogram import types
 from clean_text.v7_tiny import clean_text
 
 classifier_path = "./ruSpamNS_v7_tiny"
-if os.path.exists(os.path.join('classifier', classifier_path)):
+if os.path.exists(os.path.join("classifier", classifier_path)):
     # If the archive extractor created an extra folder "classifier", go along with it
-    classifier_path = os.path.normpath(os.path.join('classifier', classifier_path))
+    classifier_path = os.path.normpath(os.path.join("classifier", classifier_path))
 
 remote_project_path = "/app"
 image = (
@@ -161,25 +161,20 @@ class Model:
 
             try:
                 check_passed = False
-
                 message_text = message.caption or message.text
-                if message_text is None:
-                    logger.info("Message has no text, skipping")
-                    return
 
-                if len(message_text) <= 2 or re.match(r'[^\w]+$', message_text):
-                    logger.info("Message is too short to check, skipping")
-                    return
-
-                has_bad_words = self.contains_words(
+                has_bad_words = message_text is not None and self.contains_words(
                     message_text, chat_settings.bad_words
                 )
-                has_good_words = self.contains_words(
+                has_good_words = message_text is not None and self.contains_words(
                     message_text, chat_settings.good_words
                 )
-                has_telegram_links = "t.me/" in message_text or any(
-                    entity.type == "text_link" and "t.me/" in entity.url
-                    for entity in (message.entities or [])
+                has_telegram_links = message_text is not None and (
+                    "t.me/" in message_text
+                    or any(
+                        entity.type == "text_link" and "t.me/" in entity.url
+                        for entity in (message.entities or [])
+                    )
                 )
                 has_buttons = message.reply_markup is not None
                 is_forwarded_from_channel = (
@@ -217,6 +212,12 @@ class Model:
                 elif self.is_spam.local(message_text):
                     check_passed = False
                     logger.info(f"Spam detected from user {message.from_user.id}")
+                elif message_text is None:
+                    logger.info("Message has no text, skipping")
+                    return
+                elif len(message_text) <= 2 or re.match(r"[^\w]+$", message_text):
+                    logger.info("Message is too short to check, skipping")
+                    return
                 else:
                     check_passed = True
                     logger.info(f"Message from {message.from_user.id} is not spam")
