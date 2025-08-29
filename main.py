@@ -20,11 +20,7 @@ if os.path.exists(os.path.join("classifier", classifier_path)):
 remote_project_path = "/app"
 image = (
     modal.Image.debian_slim(python_version="3.12")
-    .pip_install("torch==2.7.0")
-    .pip_install("transformers==4.51.3")
-    .pip_install("fastapi==0.115.12")
-    .pip_install("pydantic==2.11.4")
-    .pip_install("aiogram==3.20.0.post0")
+    .uv_sync()
     .add_local_dir(
         classifier_path,
         remote_path=os.path.join(remote_project_path, classifier_path),
