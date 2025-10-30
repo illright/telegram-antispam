@@ -162,7 +162,7 @@ class Model:
 
             try:
                 check_passed = False
-                message_text = self.get_text_from_photo(message) or message.text
+                message_text = await self.get_text_from_photo(message) or message.text
 
                 has_bad_words = message_text is not None and self.contains_words(
                     message_text, chat_settings.bad_words
