@@ -1,4 +1,5 @@
 import hmac
+import io
 import logging
 import os
 import re
@@ -20,6 +21,7 @@ if os.path.exists(os.path.join("classifier", classifier_path)):
 remote_project_path = "/app"
 image = (
     modal.Image.debian_slim(python_version="3.12")
+    .apt_install("tesseract-ocr", "tesseract-ocr-rus")
     .uv_sync()
     .add_local_dir(
         classifier_path,
@@ -31,11 +33,13 @@ image = (
 
 with image.imports():
     import torch
+    import pytesseract
     from transformers import AutoTokenizer, AutoModelForSequenceClassification
     from aiogram import Bot, Dispatcher, types
     from aiogram.enums import ParseMode
     from aiogram.client.default import DefaultBotProperties
     from aiogram.filters import IS_MEMBER, IS_NOT_MEMBER, ChatMemberUpdatedFilter
+    from PIL import Image
 
 
 app = modal.App(name="antispam", image=image)
@@ -158,7 +162,7 @@ class Model:
 
             try:
                 check_passed = False
-                message_text = message.caption or message.text
+                message_text = self.get_text_from_photo(message) or message.text
 
                 has_bad_words = message_text is not None and self.contains_words(
                     message_text, chat_settings.bad_words
@@ -293,6 +297,26 @@ class Model:
     def contains_words(text: str, words: List[str] | None):
         lowercase_text = text.lower()
         return any(word in lowercase_text for word in (words or []))
+
+    async def get_text_from_photo(self, message: types.Message) -> str | None:
+        """Extract text from photo using OCR and add the caption."""
+        if message.photo is None:
+            return None
+
+        highest_res_photo = max(message.photo, key=lambda p: p.width * p.height)
+        file_path = (await self.bot.get_file(highest_res_photo.file_id)).file_path
+        if file_path is None:
+            return message.caption
+
+        photo_bytes = io.BytesIO()
+        await self.bot.download_file(file_path, destination=photo_bytes)
+        photo_bytes.seek(0)
+
+        text_on_photo = pytesseract.image_to_string(Image.open(photo_bytes), lang="rus")
+        if text_on_photo:
+            return "\n".join((text_on_photo, message.caption or ""))
+        else:
+            return message.caption
 
 
 # Run with `uv run modal run main` to check a single message.
