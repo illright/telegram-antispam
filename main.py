@@ -88,6 +88,7 @@ allowed_chats = {
             "энтити",
             "feature",
             "фич",
+            "@MmrizFastTrackBot",
         ],
         bad_words=["сидеть без денег", "легких денег"],
     ),
