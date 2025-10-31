@@ -306,16 +306,23 @@ class Model:
         highest_res_photo = max(message.photo, key=lambda p: p.width * p.height)
         file_path = (await self.bot.get_file(highest_res_photo.file_id)).file_path
         if file_path is None:
+            logger.error("Could not get file path for photo, falling back to caption")
             return message.caption
 
         photo_bytes = io.BytesIO()
-        await self.bot.download_file(file_path, destination=photo_bytes)
-        photo_bytes.seek(0)
+        try:
+            await self.bot.download_file(file_path, destination=photo_bytes)
+            photo_bytes.seek(0)
+        except Exception as e:
+            logger.exception(f"Error downloading photo: {e}, falling back to caption")
+            return message.caption
 
         text_on_photo = pytesseract.image_to_string(Image.open(photo_bytes), lang="rus")
         if text_on_photo:
+            logger.info(f"Extracted text from photo: {text_on_photo}")
             return "\n".join((text_on_photo, message.caption or ""))
         else:
+            logger.error("No text extracted from photo, falling back to caption")
             return message.caption
 
 
