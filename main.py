@@ -4,7 +4,7 @@ import logging
 import os
 import re
 from datetime import timedelta
-from typing import Annotated, List
+from typing import Annotated, Dict, List
 from dataclasses import dataclass, field
 
 import modal
@@ -76,7 +76,7 @@ class ChatSettings:
 
 
 # Add your chat here to allow the bot to work there.
-allowed_chats = {
+allowed_chats: Dict[str | int, ChatSettings] = {
     "feature_sliced": ChatSettings(
         spam_dump=-1002296187217,
         ban_duration=timedelta(seconds=30),
@@ -149,12 +149,16 @@ class Model:
         @self.dp.message()
         async def on_message(message: types.Message):
             """Check the first message of every user and ban them if it's detected as spam."""
+            if message.from_user is None:
+                logger.info("Message has no sender, skipping")
+                return
+
             if message.from_user.id not in unchecked_users:
                 logger.info(f"User {message.from_user.id} is checked, skipping")
                 return
 
             chat_settings = allowed_chats.get(message.chat.id) or allowed_chats.get(
-                message.chat.username
+                message.chat.username or ""
             )
             if chat_settings is None:
                 logger.error(f"Message in unknown chat, ID: {message.chat.id}")
@@ -173,7 +177,7 @@ class Model:
                 has_telegram_links = message_text is not None and (
                     "t.me/" in message_text
                     or any(
-                        entity.type == "text_link" and "t.me/" in entity.url
+                        entity.url is not None and "t.me/" in entity.url
                         for entity in (message.entities or [])
                     )
                 )
@@ -210,7 +214,7 @@ class Model:
                 elif is_story:
                     check_passed = False
                     logger.info(f"Story sent by user {message.from_user.id}")
-                elif self.is_spam.local(message_text):
+                elif message_text is not None and self.is_spam.local(message_text):
                     check_passed = False
                     logger.info(f"Spam detected from user {message.from_user.id}")
                 elif message_text is None:
@@ -261,7 +265,7 @@ class Model:
         """Accept an update from Telegram's API and verify that it's legit."""
 
         if not hmac.compare_digest(
-            x_telegram_bot_api_secret_token, os.environ["EXTRA_SECURITY_TOKEN"]
+            x_telegram_bot_api_secret_token or "", os.environ["EXTRA_SECURITY_TOKEN"]
         ):
             logger.error("Wrong secret token!")
             return {"status": "error", "message": "Wrong secret token!"}
@@ -275,6 +279,7 @@ class Model:
 
     @modal.method()
     def is_spam(self, message: str):
+        """Check if this message text is spam."""
         message = clean_text(message)
         encoding = self.tokenizer(
             message,
@@ -295,6 +300,7 @@ class Model:
 
     @staticmethod
     def contains_words(text: str, words: List[str] | None):
+        """Check if the text contains any of the specified words/phrases (case insensitive)."""
         lowercase_text = text.lower()
         return any(word in lowercase_text for word in (words or []))
 
