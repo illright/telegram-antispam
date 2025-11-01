@@ -9,6 +9,7 @@ Features:
 
 - Built to be self-hosted
 - Minimalistic so that it's easy to understand the source code
+- Recognizes text in images
 - Only works in chats that it recognizes (configurable)
 - Can forward all the spam to the channel for additional manual review (known as a _spam dump_)
 

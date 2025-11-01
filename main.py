@@ -21,7 +21,7 @@ if os.path.exists(os.path.join("classifier", classifier_path)):
 remote_project_path = "/app"
 image = (
     modal.Image.debian_slim(python_version="3.12")
-    .apt_install("tesseract-ocr", "tesseract-ocr-rus")
+    .apt_install("tesseract-ocr", "tesseract-ocr-rus")  # For recognizing text in images
     .uv_sync()
     .add_local_dir(
         classifier_path,
