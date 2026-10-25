@@ -3,13 +3,13 @@ import io
 import logging
 import os
 import re
-from datetime import timedelta
-from typing import Annotated, Dict, List
 from dataclasses import dataclass, field
+from datetime import timedelta
+from typing import Annotated
 
 import modal
-from fastapi import Header
 from aiogram import types
+from fastapi import Header
 
 from clean_text.v7_tiny import clean_text
 
@@ -32,14 +32,14 @@ image = (
 )
 
 with image.imports():
-    import torch
     import pytesseract
-    from transformers import AutoTokenizer, AutoModelForSequenceClassification
+    import torch
     from aiogram import Bot, Dispatcher, types
-    from aiogram.enums import ParseMode
     from aiogram.client.default import DefaultBotProperties
+    from aiogram.enums import ParseMode
     from aiogram.filters import IS_MEMBER, IS_NOT_MEMBER, ChatMemberUpdatedFilter
     from PIL import Image
+    from transformers import AutoModelForSequenceClassification, AutoTokenizer
 
 
 app = modal.App(name="antispam", image=image)
@@ -55,7 +55,7 @@ class ChatSettings:
 
     # These are the users who will get tagged if spam is detected.
     # Example: ["username234"]
-    admin_usernames: List[str] = field(default_factory=list)
+    admin_usernames: list[str] = field(default_factory=list)
 
     # ID of the chat/channel where spam messages will be forwarded.
     # Easiest way to get this ID: https://gist.github.com/mraaroncruz/e76d19f7d61d59419002db54030ebe35
@@ -69,14 +69,14 @@ class ChatSettings:
     ban_duration: timedelta = timedelta(seconds=30)
 
     # List of lowercase words/phrases that will make the bot skip the spam check.
-    good_words: List[str] | None = None
+    good_words: list[str] | None = None
 
     # List of lowercase words/phrases that will flag the message as spam instantly.
-    bad_words: List[str] | None = None
+    bad_words: list[str] | None = None
 
 
 # Add your chat here to allow the bot to work there.
-allowed_chats: Dict[str | int, ChatSettings] = {
+allowed_chats: dict[str | int, ChatSettings] = {
     "feature_sliced": ChatSettings(
         spam_dump=-1002296187217,
         ban_duration=timedelta(seconds=30),
@@ -187,6 +187,11 @@ class Model:
                     and message.forward_from_chat.type == "channel"
                 )
                 is_story = message.story is not None
+                is_reply_to_external_chat = (
+                    message.external_reply is not None
+                    and message.external_reply.chat is not None
+                    and message.external_reply.chat.id != message.chat.id
+                )
 
                 if has_good_words:
                     check_passed = True
@@ -214,6 +219,9 @@ class Model:
                 elif is_story:
                     check_passed = False
                     logger.info(f"Story sent by user {message.from_user.id}")
+                elif is_reply_to_external_chat:
+                    check_passed = False
+                    logger.info(f"Reply to external chat from {message.from_user.id}")
                 elif message_text is not None and self.is_spam.local(message_text):
                     check_passed = False
                     logger.info(f"Spam detected from user {message.from_user.id}")
@@ -299,7 +307,7 @@ class Model:
         return int(pred >= 0.5)
 
     @staticmethod
-    def contains_words(text: str, words: List[str] | None):
+    def contains_words(text: str, words: list[str] | None):
         """Check if the text contains any of the specified words/phrases (case insensitive)."""
         lowercase_text = text.lower()
         return any(word in lowercase_text for word in (words or []))
