@@ -255,8 +255,8 @@ class Model:
                             until_date=chat_settings.ban_duration,
                         )
                         await message.delete()
-            except Exception as e:
-                logger.error(f"Error while processing message: {e}")
+            except Exception:
+                logger.exception("Error while processing message")
 
         if "TELEGRAM_BOT_TOKEN" in os.environ:
             self.bot = Bot(
@@ -282,8 +282,8 @@ class Model:
         telegram_update = types.Update(**update)
         try:
             await self.dp.feed_webhook_update(bot=self.bot, update=telegram_update)
-        except Exception as e:
-            logger.error(e, exc_info=True)
+        except Exception:
+            logger.exception("Error while processing update")
 
     @modal.method()
     def is_spam(self, message: str):
@@ -327,8 +327,8 @@ class Model:
         try:
             await self.bot.download_file(file_path, destination=photo_bytes)
             photo_bytes.seek(0)
-        except Exception as e:
-            logger.exception(f"Error downloading photo: {e}, falling back to caption")
+        except Exception:
+            logger.exception("Error downloading photo, falling back to caption")
             return message.caption
 
         text_on_photo = pytesseract.image_to_string(Image.open(photo_bytes), lang="rus")
